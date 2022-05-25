@@ -1,0 +1,56 @@
+version: "2"
+
+services:
+  postgres:
+    environment:
+      POSTGRES_PASSWORD: lol123
+    image: postgres:13
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./pgdata13:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    # environment:
+    #   - REDIS_PASSWORD=lol123
+    command: redis-server
+    image: redis
+    ports:
+      - '6379:6379'
+    restart: always
+
+  pyzer:
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DOMAIN=ppy.sh
+      # postgres config
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=pyzer
+      - DB_USER=postgres
+      - DB_PASS=lol123
+      # redis config
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASS=
+      - REDIS_DB=0
+    image: pyzer:dev
+    ports:
+      - '443:443'
+    volumes:
+      - ./pyzer:/pyzer
+    mem_limit: 128M
+    mem_reservation: 64M
+    # (>=v3 only)
+    # deploy:
+    #   replicas: 2
+    #   resources:
+    #     limits:
+    #       cpus: '0.25'
+    #       memory: 100M
+    #     # reservations:
+    #       # cpus: '0.001'
+    #       # memory: 50M
