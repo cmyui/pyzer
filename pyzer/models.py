@@ -161,11 +161,12 @@ class User(BaseModel):
     avatar_url: str
     country_code: str
     default_group: Literal["default"]  # TODO: what's this? # TODO: others?
+    is_online: bool  # TODO: is this always true when calling this endpoint?
     is_active: bool  # ?: whats this?
     is_bot: bool
-    is_deleted: bool  # TODO: account deletions/deactivations?
-    is_online: bool  # TODO: is this always true when calling this endpoint?
     is_supporter: bool
+    is_restricted: bool  # TODO
+    is_deleted: bool  # TODO: account deletions/deactivations?
     last_visit: datetime
     pm_friends_only: bool
     profile_colour: str
@@ -199,24 +200,23 @@ class User(BaseModel):
     website: str
     country: Country
     cover: UserCover
-    is_restricted: bool  # TODO
     account_history: list[Any]  # TODO: confine this
     active_tournament_banner: Optional[ProfileBanner]
     badges: list[UserBadge]
-    favourite_beatmapset_count: int  # TODO
     follower_count: int
+    favourite_beatmapset_count: int  # TODO
     graveyard_beatmapset_count: int
-    groups: list[UserGroup]  # TODO
+    pending_beatmapset_count: int  # TODO
     loved_beatmapset_count: int  # TODO
+    ranked_beatmapset_count: int  # TODO
+    groups: list[UserGroup]  # TODO
     monthly_playcounts: list[DailyCountLineItem]
     page: UserpageContent
-    pending_beatmapset_count: int  # TODO
     previous_usernames: list[str]  # TODO || ?: store them in seperate table?
-    ranked_beatmapset_count: int  # TODO
     replays_watched_counts: list[DailyCountLineItem]
     scores_first_count: int  # ? what is this? + TODO
     statistics: UserStatistics
-    support_level: int  # TODO: what's this?
+    support_level: int  # hearts on the user's profile
     user_achievements: list[AchievementAchieval]
     rank_history: RankHistory
 

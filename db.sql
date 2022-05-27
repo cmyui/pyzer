@@ -76,7 +76,8 @@ create table users
 	kudosu_available integer default 0 not null,
 	location varchar(30) default NULL::character varying,
 	occupation varchar(30) default NULL::character varying,
-	title varchar(128) default NULL::character varying
+	title varchar(128) default NULL::character varying,
+	support_level integer default 0 not null
 );
 
 alter table users owner to postgres;
