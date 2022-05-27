@@ -9,8 +9,8 @@ async def main() -> int:
         "pyzer.api.init_api:app",
         host="127.0.0.1",
         port=443,
-        ssl_keyfile="/home/cmyui/programming/certgen/key.pem",
-        ssl_certfile="/home/cmyui/programming/certgen/cert.pem",
+        ssl_keyfile="/certs/key.pem",
+        ssl_certfile="/certs/cert.pem",
         reload=True,
     )
 
