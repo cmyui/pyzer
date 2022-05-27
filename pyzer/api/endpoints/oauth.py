@@ -44,12 +44,7 @@ async def oauth_token(
         row["hashed_password"].encode(),
     )
     if not result:
-        print(
-            "\x1b[;91m",
-            f"Invalid credentials for user",
-            username,
-            "\x1b[m",
-        )
+        print(f"\x1b[;91mInvalid credentials for user {username}\x1b[m")
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -63,12 +58,7 @@ async def oauth_token(
 
     # create new session
 
-    print(
-        "\x1b[;92m",
-        "Creating new session for user",
-        username,
-        "\x1b[m",
-    )
+    print(f"\x1b[;92mCreating new session for user {username}\x1b[m")
 
     session: models.Session = {
         "token_type": "Bearer",

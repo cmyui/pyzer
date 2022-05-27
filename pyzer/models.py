@@ -18,6 +18,9 @@ class Session(TypedDict):
     access_token: str
     refresh_token: str
 
+    id: int
+    username: str
+
 
 ## osu!api v2 (taken from lazer code) models
 

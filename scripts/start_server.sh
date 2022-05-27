@@ -7,7 +7,5 @@ set -euxo pipefail
 
 exec uvicorn pyzer.api.init_api:app \
     --host 0.0.0.0 \
-    --port 443 \
-    --ssl-keyfile /certs/key.pem \
-    --ssl-certfile /certs/cert.pem \
+    --port 80 \
     --reload

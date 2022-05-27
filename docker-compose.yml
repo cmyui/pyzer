@@ -1,6 +1,17 @@
 version: "2"
 
 services:
+  nginx:
+    depends_on:
+      - pyzer
+    image: nginx
+    ports:
+      - '443:443'
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/pyzer.conf
+      - ./certs:/certs
+    restart: always
+
   postgres:
     environment:
       POSTGRES_PASSWORD: lol123
@@ -38,8 +49,6 @@ services:
       - REDIS_PASS=
       - REDIS_DB=0
     image: pyzer:dev
-    ports:
-      - '443:443'
     volumes:
       - ./pyzer:/pyzer
     mem_limit: 128M

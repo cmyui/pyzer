@@ -1,33 +1,19 @@
-import json
-from typing import Optional
+from datetime import datetime
 
 from fastapi import APIRouter
 from fastapi import Depends
-from fastapi.security import HTTPAuthorizationCredentials
-from fastapi.security import HTTPBearer
+from pydantic import BaseModel
 
 from pyzer import models
 from pyzer import services
 from pyzer import settings
+from pyzer import usecases
 
-router = APIRouter(prefix="/api")
-
-# oauth2: https://tools.ietf.org/id/draft-richer-oauth-json-request-00.html
-security = HTTPBearer()
-
-
-async def authorize_session(
-    token: HTTPAuthorizationCredentials = Depends(security),
-) -> Optional[models.Session]:
-    session = await services.redis_sessions_db.get(token.credentials)
-    if session is None:
-        return None
-
-    return models.Session(**json.loads(session))
+router = APIRouter(prefix="/v2")
 
 
 # TODO: figure out what to do about this
-def country_code_to_long_form(country_code: str) -> str:
+def country_code_to_name(country_code: str) -> str:
     return {
         "AU": "Australia",
         "CA": "Canada",
@@ -36,8 +22,10 @@ def country_code_to_long_form(country_code: str) -> str:
 
 # NOTE - the trailing `/` matters?
 # TODO: is this to differentiate lazer?
-@router.get("/v2/me/")
-async def get_current_user(session: models.Session = Depends(authorize_session)):
+@router.get("/me/")
+async def get_current_user(
+    session: models.Session = Depends(usecases.sessions.authenticate),
+):
     # https://osu.ppy.sh/docs/index.html#user
 
     # validate credentials
@@ -55,13 +43,11 @@ async def get_current_user(session: models.Session = Depends(authorize_session))
     if statistics_row is None:
         return None  # TODO: what's correct error?
 
-    user_id = user_row["id"]
-
     resp = {
-        "id": user_id,
+        "id": user_row["id"],
         # TODO: customizable subdomains?
-        "avatar_url": f"https://a.{settings.DOMAIN}/{user_id}.jpeg",
-        "country_code": user_row["country"],
+        "avatar_url": f"https://a.{settings.DOMAIN}/{user_row['id']}.jpeg",
+        "country_code": user_row["country_code"],
         "default_group": "default",  # TODO: whats this?
         "is_active": True,  # TODO: whats this?
         "is_bot": user_row["is_bot"],
@@ -101,8 +87,8 @@ async def get_current_user(session: models.Session = Depends(authorize_session))
         "twitter": user_row["twitter"],
         "website": user_row["website"],
         "country": {  # TODO, and also why is code duplicated
-            "code": user_row["country"],
-            "name": country_code_to_long_form(user_row["country"]),
+            "code": user_row["country_code"],
+            "name": country_code_to_name(user_row["country_code"]),
         },
         "cover": {  # TODO, and also why is code duplicated
             "custom_url": "https://x.catboy.best/21PPQcH.png",
@@ -250,15 +236,78 @@ async def get_current_user(session: models.Session = Depends(authorize_session))
     # }
 
 
-@router.get("/v2/friends")
-async def get_current_friends(session: models.Session = Depends(authorize_session)):
-    friend_ids: list[int] = []
-    return friend_ids
+@router.get("/friends", response_model=list[int])
+async def get_current_friends(
+    session: models.Session = Depends(usecases.sessions.authenticate),
+):
+    rows = await services.database.fetch_all(
+        "SELECT user_b FROM user_relations "
+        "WHERE user_a = :user_a AND blocked IS FALSE",
+        {"user_a": session["id"]},
+    )
+
+    return [row["user_b"] for row in rows]
 
 
-# TODO: not even sure when this is used
-# @router.websocket("/ws")
-# async def websocket_endpoint(websocket: WebSocket):
-#     while True:
-#         data = await websocket.receive()
-#         await websocket.send(data)
+class UserCompact(BaseModel):
+    id: int
+    username: str
+    profile_colour: str
+    avatar_url: str
+    country_code: str
+    is_active: bool
+    is_bot: bool
+    is_deleted: bool
+    is_online: bool
+    is_supporter: bool
+
+
+class SeasonalBackground(BaseModel):
+    url: str
+    user: UserCompact
+
+
+class SeasonalBackgroundsResponse(BaseModel):
+    ends_at: datetime
+    backgrounds: list[SeasonalBackground]
+
+
+class Context:
+    ...
+
+
+@router.get("/seasonal-backgrounds", response_model=SeasonalBackgroundsResponse)
+async def get_seasonal_backgrounds(
+    context: Context = Depends(),
+    session: models.Session = Depends(usecases.sessions.authenticate),
+):
+    backgound_rows = [
+        dict(row)  # take mutable copies; we'll need to add more fields
+        for row in await services.database.fetch_all(
+            "SELECT * FROM seasonal_backgrounds",
+        )
+    ]
+
+    for background_row in backgound_rows:
+        user_row = await services.database.fetch_one(
+            "SELECT id, username, profile_colour, "
+            "country_code, is_bot, is_supporter "
+            "FROM users WHERE id = :id",
+            {"id": background_row["creator_id"]},
+        )
+        assert user_row is not None
+
+        # add all the user details to the background row
+        background_row["user"] = {
+            "avatar_url": f"https://a.{settings.DOMAIN}/{user_row['id']}",
+            # TODO: these flags
+            "is_active": False,
+            "is_online": False,
+            "is_deleted": False,
+            **user_row,
+        }
+
+    return {
+        "ends_at": "2023-01-01T00:00:00+00:00",
+        "backgrounds": backgound_rows,
+    }
